@@ -1,4 +1,4 @@
-  use NORTHWND;
+  use ConfigAvanzadas;
   --listar todos los pedidos moestrando el numero de pedido, 
   --importe, nombre y limite de credito del cliente 
   SELECT p.Num_Pedido, p.Importe, c.Limite_Credito, c.Empresa
@@ -17,22 +17,19 @@
         and Empresa like 'A%'
   order by Importe desc;
 
-  select * from Representantes;
-  inner join 
-  Oficinas as o
-  on o.Oficina= r.Oficina_Rep
-  WHERE (o.Ciudad in('Navarra','Castellón','Daimiel'))
-  or 
-  (r.Jefe is null and r.Fecha_Contrato>='198806-01')
-  or 
-  (r.Ventas>Cuota and not r.Ventas>600000)
-  order by r.Ventas desc
-  ;
+SELECT r.*, o.*
+FROM Representantes AS r
+INNER JOIN Oficinas AS o
+  ON o.Oficina = r.Oficina_Rep
+WHERE (o.Ciudad IN ('Navarra', 'CastellÃ³n', 'Daimiel'))
+   OR (r.Jefe IS NULL AND r.Fecha_Contrato >= '1988-06-01')
+   OR (r.Ventas > r.Cuota AND r.Ventas <= 600000)
+ORDER BY r.Ventas DESC;
   --Seleccionar los productos incluyendo la categoria y el proveedor que lo surte
   SELECT ProductID,ProductName,UnitPrice,UnitsInStock,CategoryID,SupplierID
   FROM Products;
 
-   SELECT ProductID AS [Número producto],
+   SELECT ProductID AS [Nï¿½mero producto],
           ProductName AS [Nombre producto],
 		  UnitPrice AS [Precio],
 		  UnitsInStock AS [Existencia],
@@ -50,7 +47,7 @@
   INNER JOIN  Categories AS ca
   ON Pr.CategoryID=ca.CategoryID;
 
-  SELECT pr.ProductID AS [Número producto],
+  SELECT pr.ProductID AS [Nï¿½mero producto],
          pr.ProductName AS [Nombre producto],
 		 pr.UnitPrice AS [Precio],
 		 pr.UnitsInStock AS [Existencia],
@@ -124,7 +121,7 @@ SELECT pe.Importe, pe.Num_Pedido,re.Nombre,cl.Empresa
   INNER JOIN Clientes AS [cl]
   ON cl.Num_Cli=pe.Cliente
 where pe.Importe>25000;
---listar los pedidos superirores a 25000, mostrando el numero de pedido, el noombre del cliemte que lo encargó y 
+--listar los pedidos superirores a 25000, mostrando el numero de pedido, el noombre del cliemte que lo encargï¿½ y 
 --el nombre del representante asignado al cliente
 SELECT pe.Importe, pe.Num_Pedido,re.Nombre,cl.Empresa, re.Nombre
   FROM Pedidos AS [pe]
@@ -145,7 +142,7 @@ inner join Representantes su
 on jefe.Num_Empl=su.Jefe;
 
 --Consultas de agregado (Max, min, avg, count(*),count(campo))
---¿Cuál es el rendimiento medio de la cuota de los representantes?
+--ï¿½Cuï¿½l es el rendimiento medio de la cuota de los representantes?
 SELECT AVG (Cuota) AS [Rendimiento medio de las cuotas]
 FROM Representantes;
 --cual es la cuota mayor 
@@ -159,7 +156,7 @@ SELECT MIN (Cuota) AS [Cuota menor],
 MAX (Cuota) AS [Cuota mayor]
 FROM Representantes;
 --seleccionar es la fecha de pedido mas antigua
-SELECT MIN (Fecha_Pedido) AS [Pedido más antiguo]
+SELECT MIN (Fecha_Pedido) AS [Pedido mï¿½s antiguo]
 FROM Pedidos;
 --calcular el rendimiento de los representantes 
 SELECT 100*(Ventas/Cuota) AS [Rendimiento de ventas]
@@ -190,7 +187,7 @@ where pe.Importe>25000;
 select*from Representantes;
 SELECT  count (distinct Puesto) --distinc quita valores repetidos
   FROM Representantes;
---cual es el importe d¿medio de cada uno de los representantes 
+--cual es el importe dï¿½medio de cada uno de los representantes 
 SELECT Nombre, AVG (DISTINCT IMPORTE) AS [Importe]
 FROM Pedidos AS p
 INNER JOIN 
@@ -204,7 +201,7 @@ FROM Pedidos AS p
 INNER JOIN 
 Representantes AS r
 ON p.Rep=r.Num_Empl
-WHERE r.Nombre IN ('Tomás Saz','María Jiménez','Pablo Cruz')
+WHERE r.Nombre IN ('Tomï¿½s Saz','Marï¿½a Jimï¿½nez','Pablo Cruz')
 GROUP BY r.Nombre
 ORDER BY Nombre;
 CREATE OR ALTER PROCEDURE sp_pruebaconsulta
@@ -212,15 +209,83 @@ CREATE OR ALTER PROCEDURE sp_pruebaconsulta
 @fechaFinal date
 AS 
 BEGIN 
-SELECT Nombre, AVG (DISTINCT IMPORTE) AS [Importe]
-FROM Pedidos AS p
-INNER JOIN 
-Representantes AS r
-ON p.Rep=r.Num_Empl
-where Fecha_Pedido between @fechaInicial and @fechaFinal
-GROUP BY r.Nombre
-ORDER BY Nombre
-end;
-exec  sp_pruebaconsulta '1989-01-01', '1989-04-06';
-select * from Pedidos;
+    SELECT r.Nombre, AVG(DISTINCT p.IMPORTE) AS [Importe]
+    FROM Pedidos AS p
+    INNER JOIN Representantes AS r
+        ON p.Rep = r.Num_Empl
+    WHERE p.Fecha_Pedido BETWEEN @fechaInicial AND @fechaFinal
+    GROUP BY r.Nombre
+    ORDER BY r.Nombre;
+END;
+
+EXEC sp_pruebaconsulta '1989-01-01', '1989-04-06';
+
+SELECT * FROM Pedidos;
+
 --cual es el rango de las cuotas asignadas de cada oficina (ciudad)
+SELECT 
+    o.Ciudad,
+    MAX(r.Cuota) AS MaxCuota,
+    MIN(r.Cuota) AS MinCuota,
+    (MAX(r.Cuota) - MIN(r.Cuota)) AS RangoCuota
+FROM Representantes AS r
+INNER JOIN Oficinas AS o
+    ON o.Oficina = r.Oficina_Rep
+GROUP BY o.Ciudad
+ORDER BY o.Ciudad;
+
+USE ConfigAvanzadas;
+
+
+-- 1) Seleccionar el ingreso total por cliente en 1997 y ordenar por el ingrso de forma descendente
+
+SELECT c.CompanyName AS [Cliente], 
+ROUND(SUM(od.Quantity * od.UnitPrice * (1 * od.Discount)) AS [Ingreso])
+
+FROM [Order Details] AS od
+     INNER JOIN
+     Orders AS o
+     ON o.OrderID = od.OrderID
+     JOIN
+     Customers as c
+     ON o.CustomerID = c.CustomerID
+     WHERE YEAR(o.OrderDate) = 1997
+     GROUP BY c.CompanyName
+     ORDER BY 2 DESC;
+G0
+
+/*
+  2) Seleccionar los productos por categoria mas vendidos (UNIDADES),
+  enviados alemania ordenador por categoria ascendente y dentro de categoria de
+  forma descendente
+*/
+SELECT c.CompanyName as [Categoria],
+p.ProductName as [Producto],
+SUM(od.Quantity) AS [Unidades]
+FROM [Order Details] AS od
+INNER JOIN
+Orders as o
+ON o.OrderID = od.OrderID
+INNER JOIN 
+Products as p
+ ON od.ProductID = p.ProductID
+INNER JOIN
+Categories as c
+ON p.CategoryID = c.CategoryID
+WHERE o.ShipCountry = 'Germany'
+ORDER BY c.CategoryName, p.ProductName
+GROUP BY 1, [Unidades] DESC;
+
+
+/*
+   3) Seleccionar empleadps con mas pedidos realizados por aÃ±o, ordenados por aÃ±o y por numero de pedidos
+*/
+SELECT CONCAT(e.FirstName + ' ' + e.LastName) AS [Empleado],
+DATEPART(YEAR, o.OrderDate) AS [AÃ±o],
+COUNT(*) as [Numero de Pedidos]
+FROM Employees AS e
+INNER JOIN
+Orders AS o
+ON e.EmployeeID = o.EmployeeID
+GROUP BY COUNT(e.FirstName + ' ' + e.LastName), DATEPART(YEAR, o.OrderDate),
+ORDER BY [AÃ±o], [Numero Pedidos] DESC;
